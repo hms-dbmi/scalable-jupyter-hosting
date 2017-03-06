@@ -3,9 +3,8 @@ DBMI Hackathon project to provide some scaling functionality to the existing Jup
 
 [Jupyterhub PyPi](https://pypi.python.org/pypi/jupyterhub)
 
-## Pre-reqs
+## Pre-reqs:
 
-## Installation
+## Installation:
 
-## Notes
-
+## Notes:
