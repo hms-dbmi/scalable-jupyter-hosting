@@ -2,6 +2,8 @@
 A Spawner for JupyterHub that runs each user's server in a separate docker container
 """
 
+import json
+import requests
 import os
 import string
 from textwrap import dedent
@@ -77,10 +79,30 @@ class HackerSpawner(DockerSpawner):
                 else:
                     tls_config = None
 
-                docker_host = self.docker_host
+                r = requests.put('http://172.31.73.122:8081/resource_manager/jupyter_users/user@user.com/?volume=/user/volume/path/')
+                print(r)
+                print(r.content)
+                response = json.loads(str(r.content,"utf-8"))
+                self.host_ip = response["node"]["private_ip"]
+                self.host_port = response["port"]
+                docker_host = self.host_ip + ":2376"
                 client = docker.Client(base_url=docker_host, tls=tls_config, version='auto')
             cls._client = client
         return cls._client
+
+    def get_ip(self):
+        r = requests.put('http://172.31.73.122:8081/resource_manager/jupyter_users/user@user.com/?volume=/user/volume/path/')
+        print(r)
+        print(r.content)
+        response = json.loads(str(r.content,"utf-8"))
+        return response["node"]["private_ip"]
+
+    def get_port(self):
+        r = requests.put('http://172.31.73.122:8081/resource_manager/jupyter_users/user@user.com/?volume=/user/volume/path/')
+        print(r)
+        print(r.content)
+        response = json.loads(str(r.content,"utf-8"))
+        return response["port"]
 
     @gen.coroutine
     def get_container(self):
@@ -123,13 +145,15 @@ class HackerSpawner(DockerSpawner):
         if container is None:
             image = image or self.container_image
 
+            thing = self.get_ip_and_port()
+
             # build the dictionary of keyword arguments for create_container
             create_kwargs = dict(
                 image=image,
                 environment=self.get_env(),
                 volumes=self.volume_mount_points,
                 name=self.container_name,
-                ports=["80:80","443:443","8080:8080","8888:8888"])
+                ports={self.get_port():"80"})
             create_kwargs.update(self.extra_create_kwargs)
             if extra_create_kwargs:
                 create_kwargs.update(extra_create_kwargs)
@@ -138,7 +162,7 @@ class HackerSpawner(DockerSpawner):
             host_config = dict(binds=self.volume_binds, links=self.links)
 
             #if not self.use_internal_ip:
-            host_config['port_bindings'] = {8888: 80}
+            host_config['port_bindings'] = {self.get_port(): 80}
 
             host_config.update(self.extra_host_config)
 
@@ -212,7 +236,7 @@ class HackerSpawner(DockerSpawner):
                 raise RuntimeError("Failed to get port info for %s" % self.container_id)
             ip = resp[0]['HostIp']
             port = resp[0]['HostPort']
-        return "172.31.68.193",80
+        return self.host_ip,self.host_port
 
     def get_network_ip(self, network_settings):
         networks = network_settings['Networks']
@@ -225,7 +249,7 @@ class HackerSpawner(DockerSpawner):
             )
         network = networks[self.network_name]
         ip = network['IPAddress']
-        return "172.31.68.193"
+        return self.host_ip
 
     @gen.coroutine
     def stop(self, now=False):
