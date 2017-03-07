@@ -13,6 +13,7 @@ clone-oauthenticator:
        
 clone-dockerspawner:
 	test -d ./dockerspawner || git clone https://github.com/hms-dbmi/dockerspawner.git
+	cp hacked_dockerspawner.py dockerspawner/dockerspawner/hacked_dockerspawner.py
     
 pull:
 	docker pull $(DOCKER_NOTEBOOK_IMAGES)
